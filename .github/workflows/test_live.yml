@@ -1,0 +1,55 @@
+name: VIRU FM YouTube Live Test
+
+on:
+  workflow_dispatch: # Actions ටැබ් එකෙන් Manual Run කරන්න
+
+jobs:
+  stream_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Google Chrome, FFmpeg and Audio Drivers
+      run: |
+        sudo apt update
+        sudo apt install -y chromium-browser ffmpeg pulseaudio xvfb xdotool
+
+    - name: Setup Virtual Audio (PulseAudio)
+      run: |
+        # බොරු සවුන්ඩ් කාඩ් එකක් සිස්ටම් එක ඇතුලේ හදනවා
+        mkdir -p ~/.config/pulse
+        echo "default-server = unix:/tmp/pulse-socket" > ~/.config/pulse/client.conf
+        pulseaudio --daemonize=no --log-target=stderr --exit-idle-time=-1 --realtime=no --disallow-exit &
+        sleep 3
+        
+        # Audio Sink එකක් නිර්මාණය කිරීම
+        pactl load-module module-null-sink sink_name=vfm_sink
+        pactl set-default-sink vfm_sink
+
+    - name: Start Virtual Display (Xvfb)
+      run: |
+        Xvfb :99 -screen 0 1280x720x24 &
+        echo "DISPLAY=:99" >> $GITHUB_ENV
+        sleep 2
+
+    - name: Open Radio Site & Auto Click Play Button
+      run: |
+        export DISPLAY=:99
+        # බ්‍රවුසර් එක පසුබිමෙන් ඕපන් කරනවා
+        chromium-browser --autoplay-policy=no-user-gesture-required --no-sandbox "https://radio-omega-ashy.vercel.app/" &
+        sleep 8
+        
+        # ⚡ සයිට් එක ලෝඩ් වුණාම "Play Radio" බටන් එක ඔටෝම ක්ලික් කරන්න 'Enter' කී එක හෝ මවුස් එක පාවිච්චි කරනවා
+        xdotool key Tab
+        sleep 1
+        xdotool key Return
+        echo "Play Button Clicked Automatically!"
+        sleep 5
+
+    - name: Stream to YouTube Live (Run for 10 Minutes)
+      run: |
+        export DISPLAY=:99
+        # විනාඩි 10කින් (තත්පර 600) මේ ටෙස්ට් එක ඔටෝම නතර වෙනවා
+        timeout 600s ffmpeg -f x11grab -video_size 1280x720 -i :99.0 -f pulse -i vfm_sink.monitor -c:v libx264 -preset veryfast -b:v 2500k -g 60 -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://://youtube.com{{ secrets.YOUTUBE_STREAM_KEY }}"
