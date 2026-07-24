@@ -14,34 +14,35 @@ jobs:
     - name: Install Google Chrome, FFmpeg and Audio Drivers
       run: |
         sudo apt update
-        sudo apt install -y chromium-browser ffmpeg pulseaudio xvfb xdotool
+        sudo apt install -y chromium-browser ffmpeg pulseaudio xvfb xdotool alsa-utils
 
-    - name: Setup Virtual Audio (PulseAudio)
+    - name: Setup Virtual Display and Audio (Xvfb & PulseAudio)
       run: |
-        # බොරු සවුන්ඩ් කාඩ් එකක් සිස්ටම් එක ඇතුලේ හදනවා
-        mkdir -p ~/.config/pulse
-        echo "default-server = unix:/tmp/pulse-socket" > ~/.config/pulse/client.conf
-        pulseaudio --daemonize=no --log-target=stderr --exit-idle-time=-1 --realtime=no --disallow-exit &
-        sleep 3
-        
-        # Audio Sink එකක් නිර්මාණය කිරීම
-        pactl load-module module-null-sink sink_name=vfm_sink
-        pactl set-default-sink vfm_sink
-
-    - name: Start Virtual Display (Xvfb)
-      run: |
+        # 1. Virtual Display එක පණගැන්වීම
         Xvfb :99 -screen 0 1280x720x24 &
         echo "DISPLAY=:99" >> $GITHUB_ENV
         sleep 2
+
+        # 2. PulseAudio Directories සාදා අවසර ලබා දීම
+        mkdir -p ~/.config/pulse
+        
+        # 3. PulseAudio Daemon එක System එක ඇතුලේ බලෙන් Start කිරීම
+        pulseaudio --start --exit-idle-time=-1 --realtime=no --system=false
+        sleep 5
+        
+        # 4. Audio සිග්නල් එක අල්ලගන්න Null Sink එකක් නිර්මාණය කිරීම
+        pactl load-module module-null-sink sink_name=vfm_sink sink_properties=device.description=Virtual_Sink
+        pactl set-default-sink vfm_sink
+        echo "PulseAudio Successfully Configured!"
 
     - name: Open Radio Site & Auto Click Play Button
       run: |
         export DISPLAY=:99
         # බ්‍රවුසර් එක පසුබිමෙන් ඕපන් කරනවා
-        chromium-browser --autoplay-policy=no-user-gesture-required --no-sandbox "https://radio-omega-ashy.vercel.app/" &
-        sleep 8
+        chromium-browser --autoplay-policy=no-user-gesture-required --no-sandbox "https://vercel.app" &
+        sleep 10
         
-        # ⚡ සයිට් එක ලෝඩ් වුණාම "Play Radio" බටන් එක ඔටෝම ක්ලික් කරන්න 'Enter' කී එක හෝ මවුස් එක පාවිච්චි කරනවා
+        # ⚡ සයිට් එක ලෝඩ් වුණාම "Play Radio" බටන් එක ඔටෝම ක්ලික් කිරීම
         xdotool key Tab
         sleep 1
         xdotool key Return
