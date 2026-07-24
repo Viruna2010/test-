@@ -53,8 +53,5 @@ jobs:
       run: |
         export DISPLAY=:99
         
-        # 🔐 ඔයාගේ Stream Key එක මෙතනට කෙළින්ම පිරිසිදුව ඇතුලත් කලා
-        YOUTUBE_URL="rtmp://://youtube.com"
-        
-        # විනාඩි 10කින් (තත්පර 600) මේ ටෙස්ට් එක ඔටෝම නතර වෙනවා
-        timeout 600s ffmpeg -f x11grab -video_size 1280x720 -i :99.0 -f pulse -i vfm_sink.monitor -c:v libx264 -preset veryfast -b:v 2500k -g 60 -c:a aac -b:a 128k -ar 44100 -f flv "$YOUTUBE_URL"
+        # ⚡ මෙතන කිසිම Variable එකක් නැතුව මුළු ලින්ක් එකම FFmpeg එකට ඩිරෙක්ට්ම දුන්නා
+        timeout 600s ffmpeg -f x11grab -video_size 1280x720 -i :99.0 -f pulse -i vfm_sink.monitor -c:v libx264 -preset veryfast -b:v 2500k -g 60 -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://://youtube.com"
